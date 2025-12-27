@@ -26,6 +26,9 @@ class Settings:
     
     DB_BACKEND: str = os.getenv("DB_BACKEND", "inmemory")
     
+    SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
+    
     CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "*").split(",")
 
 settings = Settings()
