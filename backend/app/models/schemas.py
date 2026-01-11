@@ -16,11 +16,24 @@ class ActionRequest(BaseModel):
     metadata: Optional[dict] = Field(default=None, description="Additional context for the action")
 
 
+class TriggeredPolicyInfo(BaseModel):
+    """Details of the policy that made the final decision."""
+    id: str = Field(..., description="Name or ID of the triggered policy")
+    reason: str = Field(..., description="The reason provided by the policy")
+
+
+class DecisionTrace(BaseModel):
+    """
+    Provides a detailed trace of the decision-making process for audit purposes.
+    """
+    triggered_policy: Optional[TriggeredPolicyInfo] = Field(default=None, description="The deterministic policy that was triggered to make the decision")
+    ai_recommendation_summary: Optional[str] = Field(default=None, description="A summary of the AI's recommendation, if available")
+
+
 class ActionResponse(BaseModel):
-    event_id: str
+    decision_id: str = Field(..., description="Unique ID for this decision event")
     decision: ActionDecision
-    reason: str
-    ai_recommendation: Optional[str] = None
+    trace: DecisionTrace = Field(..., description="Detailed trace of the decision process")
     ai_available: bool
     timestamp: datetime
 

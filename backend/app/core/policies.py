@@ -30,23 +30,24 @@ class PolicyEngine:
             },
         ]
     
-    def evaluate(self, request: ActionRequest, ai_recommendation: Optional[str] = None) -> tuple[ActionDecision, str]:
+    def evaluate(self, request: ActionRequest, ai_recommendation: Optional[str] = None) -> tuple[ActionDecision, str, Optional[str]]:
         """
         Evaluate request against policies.
-        Returns (decision, reason).
+        Returns (decision, reason, policy_id).
         
         Policy Engine is the DECISION MAKER.
         AI recommendation is considered but not binding.
         """
         for policy in self._policies:
             if policy["condition"](request):
-                return policy["decision"], policy["reason"]
+                return policy["decision"], policy["reason"], policy["name"]
         
         if ai_recommendation:
             if "reject" in ai_recommendation.lower() or "deny" in ai_recommendation.lower():
-                return ActionDecision.REJECT, f"Rejected based on AI recommendation: {ai_recommendation}"
+                reason = f"Rejected based on AI recommendation: {ai_recommendation}"
+                return ActionDecision.REJECT, reason, "ai_recommendation"
         
-        return ActionDecision.APPROVE, "Action approved by policy engine"
+        return ActionDecision.APPROVE, "Action approved by policy engine", None
     
     def add_policy(self, name: str, condition: callable, decision: ActionDecision, reason: str):
         """Add a new policy rule"""
