@@ -5,6 +5,7 @@ import hashlib
 
 from app.adapters.base_db import BaseDatabase
 from app.domain.event import Event
+from app.models.schemas import Policy, PolicyCreate, PolicyUpdate
 
 
 class InMemoryDatabase(BaseDatabase):
@@ -17,6 +18,7 @@ class InMemoryDatabase(BaseDatabase):
         self._events: list[Event] = []
         self._users: dict[str, dict] = {}
         self._api_keys: dict[str, dict] = {}
+        self._policies: dict[str, Policy] = {}
     
     async def create_event(self, event: Event) -> Event:
         self._events.append(event)
@@ -95,6 +97,36 @@ class InMemoryDatabase(BaseDatabase):
     async def delete_api_key(self, key_id: str, user_id: str) -> bool:
         if key_id in self._api_keys and self._api_keys[key_id]["user_id"] == user_id:
             del self._api_keys[key_id]
+            return True
+        return False
+
+    # --- Policy Management ---
+
+    async def create_policy(self, policy_data: PolicyCreate) -> Policy:
+        policy = Policy(**policy_data.model_dump())
+        self._policies[policy.id] = policy
+        return policy
+
+    async def get_policy(self, policy_id: str) -> Optional[Policy]:
+        return self._policies.get(policy_id)
+
+    async def get_all_policies(self) -> list[Policy]:
+        return list(self._policies.values())
+
+    async def update_policy(self, policy_id: str, policy_data: PolicyUpdate) -> Optional[Policy]:
+        policy = self._policies.get(policy_id)
+        if not policy:
+            return None
+
+        update_data = policy_data.model_dump(exclude_unset=True)
+        updated_policy = policy.model_copy(update=update_data)
+        updated_policy.updated_at = datetime.utcnow()
+        self._policies[policy_id] = updated_policy
+        return updated_policy
+
+    async def delete_policy(self, policy_id: str) -> bool:
+        if policy_id in self._policies:
+            del self._policies[policy_id]
             return True
         return False
 

@@ -1,3 +1,4 @@
+import uuid
 from pydantic import BaseModel, Field
 from typing import Optional, Literal
 from datetime import datetime
@@ -110,3 +111,61 @@ class PricingPlan(BaseModel):
 class BillingWebhookPayload(BaseModel):
     event_type: str
     data: dict
+
+
+# --- Policy Definition Models (DSL) ---
+
+class PolicyConditionOperator(str, Enum):
+    EQUALS = "equals"
+    NOT_EQUALS = "not_equals"
+    CONTAINS = "contains"
+    NOT_CONTAINS = "not_contains"
+    STARTS_WITH = "starts_with"
+    ENDS_WITH = "ends_with"
+
+
+class PolicyCondition(BaseModel):
+    """A single condition within a policy."""
+    field: str = Field(..., description="Field from the ActionRequest to evaluate (e.g., 'action_type', 'resource_id', 'metadata.team')")
+    operator: PolicyConditionOperator
+    value: str = Field(..., description="The value to compare against")
+
+
+class PolicyCreate(BaseModel):
+    """Schema for creating a new policy."""
+    id: str = Field(default_factory=lambda: f"pol_{uuid.uuid4().hex[:12]}", description="Unique identifier for the policy")
+    name: str = Field(..., description="Human-readable name for the policy")
+    description: Optional[str] = None
+    conditions: list[PolicyCondition] = Field(..., description="A list of conditions. All must be true for the policy to trigger (AND logic).")
+    decision: ActionDecision = Field(..., description="The decision to make if the policy is triggered")
+    reason: str = Field(..., description="The reason to return if the policy is triggered")
+
+
+class PolicyUpdate(BaseModel):
+    """Schema for updating an existing policy."""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    conditions: Optional[list[PolicyCondition]] = None
+    decision: Optional[ActionDecision] = None
+    reason: Optional[str] = None
+
+
+class Policy(PolicyCreate):
+    """Full policy schema including metadata."""
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+# --- Simulation Models ---
+
+class SimulationRequest(BaseModel):
+    """Schema for a policy simulation request."""
+    policy: Policy
+    request: ActionRequest
+
+
+class SimulationResponse(BaseModel):
+    """Schema for a policy simulation response."""
+    decision: ActionDecision
+    trace: DecisionTrace
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
