@@ -31,7 +31,7 @@ class ActionEngine:
         
         ai_recommendation, ai_available = await ai_advisor.get_recommendation(request)
         
-        decision, reason, policy_id = policy_engine.evaluate(request, ai_recommendation)
+        decision, reason, policy_id = await policy_engine.evaluate(request, ai_recommendation)
         
         # Create the decision trace
         trace = DecisionTrace(

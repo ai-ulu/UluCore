@@ -4,7 +4,6 @@ import {
   Shield,
   Zap,
   Lock,
-  Activity,
   ArrowRight,
   SlidersHorizontal,
   BarChart,
