@@ -1,6 +1,17 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Shield, Zap, Lock, Activity, ArrowRight } from 'lucide-react';
+import {
+  Shield,
+  Zap,
+  Lock,
+  Activity,
+  ArrowRight,
+  SlidersHorizontal,
+  BarChart,
+  HeartPulse,
+  Landmark,
+  Database,
+} from 'lucide-react';
 
 export function HomePage() {
   return (
@@ -13,13 +24,8 @@ export function HomePage() {
               <span className="font-bold text-xl text-white">UluCore</span>
             </div>
             <div className="flex items-center gap-4">
-              <Link to="/pricing">
-                <Button variant="ghost" className="text-slate-300 hover:text-white">
-                  Pricing
-                </Button>
-              </Link>
               <Link to="/login">
-                <Button variant="outline">Sign in</Button>
+                <Button variant="outline">Get Started</Button>
               </Link>
             </div>
           </div>
@@ -35,9 +41,10 @@ export function HomePage() {
               <span className="text-primary">with AI Advisory</span>
             </h1>
             <p className="text-xl text-slate-400 mb-8 max-w-2xl mx-auto">
-              UluCore helps developers make smart decisions about actions in their
-              applications. Deterministic policies + AI recommendations = reliable
-              decisions with immutable audit logs.
+              UluCore empowers organizations to make automated, secure, and
+              intelligent decisions for any critical action. Deterministic
+              policies + AI recommendations = reliable outcomes with immutable
+              audit logs.
             </p>
             <div className="flex justify-center gap-4">
               <Link to="/login">
@@ -45,11 +52,11 @@ export function HomePage() {
                   Get Started <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link to="/pricing">
+              <a href="mailto:contact@ulucore.com">
                 <Button size="lg" variant="outline">
-                  View Pricing
+                  Contact Us
                 </Button>
-              </Link>
+              </a>
             </div>
           </div>
         </section>
@@ -57,19 +64,33 @@ export function HomePage() {
         <section className="py-16 px-4 bg-slate-800/50">
           <div className="max-w-6xl mx-auto">
             <h2 className="text-3xl font-bold text-white text-center mb-12">
-              Core Principles
+              Core Features
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="p-6 bg-slate-800 rounded-xl border border-slate-700">
                 <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4">
                   <Zap className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">
-                  Fail-Safe AI
+                  Fail-Safe AI Advisory
                 </h3>
                 <p className="text-slate-400">
-                  AI recommends, never decides. If AI is unavailable, the system
-                  continues operating with policy-based decisions.
+                  Enhance your decisions with AI recommendations. Our fail-safe
+                  system ensures that if the AI is unavailable, your operations
+                  continue smoothly based on deterministic rules.
+                </p>
+              </div>
+              <div className="p-6 bg-slate-800 rounded-xl border border-slate-700">
+                <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4">
+                  <SlidersHorizontal className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  Flexible Policy Engine
+                </h3>
+                <p className="text-slate-400">
+                  Define your own rules. The deterministic policy engine allows
+                  you to configure custom logic tailored to your specific needs,
+                  ensuring predictable and reliable outcomes.
                 </p>
               </div>
               <div className="p-6 bg-slate-800 rounded-xl border border-slate-700">
@@ -77,23 +98,25 @@ export function HomePage() {
                   <Lock className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">
-                  Immutable Events
+                  Immutable Audit Logs
                 </h3>
                 <p className="text-slate-400">
-                  Every decision is logged as an immutable event. No updates, no
-                  deletes - complete audit trail guaranteed.
+                  Every decision is logged as an immutable event, creating a
+                  tamper-proof audit trail. Guarantee compliance and simplify
+                  debugging with a complete history of operations.
                 </p>
               </div>
               <div className="p-6 bg-slate-800 rounded-xl border border-slate-700">
                 <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4">
-                  <Activity className="h-6 w-6 text-primary" />
+                  <BarChart className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-xl font-semibold text-white mb-2">
-                  API-First SaaS
+                  Metrics & Monitoring
                 </h3>
                 <p className="text-slate-400">
-                  Built for developers. Simple REST API with JWT and API key
-                  authentication. Cloud or self-hosted.
+                  Gain insights into your decision-making process. Track actions,
+                  approvals, and rejections with built-in metrics to monitor the
+                  health and performance of your system.
                 </p>
               </div>
             </div>
@@ -165,20 +188,73 @@ export function HomePage() {
           </div>
         </section>
 
+        <section className="py-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-3xl font-bold text-white text-center mb-12">
+              Use Cases Across Industries
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="p-6 bg-slate-800 rounded-xl border border-slate-700 text-center">
+                <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4 mx-auto">
+                  <HeartPulse className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  Healthcare
+                </h3>
+                <p className="text-slate-400">
+                  Securely manage patient data access, approve treatment plans,
+                  and ensure HIPAA compliance with an immutable audit trail.
+                </p>
+              </div>
+              <div className="p-6 bg-slate-800 rounded-xl border border-slate-700 text-center">
+                <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4 mx-auto">
+                  <Landmark className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  Finance & Banking
+                </h3>
+                <p className="text-slate-400">
+                  Automate transaction approvals, flag suspicious activities with
+                  AI insights, and maintain regulatory compliance.
+                </p>
+              </div>
+              <div className="p-6 bg-slate-800 rounded-xl border border-slate-700 text-center">
+                <div className="p-3 bg-primary/10 rounded-lg w-fit mb-4 mx-auto">
+                  <Database className="h-8 w-8 text-primary" />
+                </div>
+                <h3 className="text-xl font-semibold text-white mb-2">
+                  Public Sector
+                </h3>
+                <p className="text-slate-400">
+                  Protect sensitive government records, manage access control for
+                  critical infrastructure, and ensure data integrity.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="py-16 px-4 bg-slate-800/50">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl font-bold text-white mb-4">
-              Ready to get started?
+              Integrate a Smarter Decision Engine
             </h2>
             <p className="text-slate-400 mb-8">
-              Start with our free tier - 100 actions per month, no credit card
-              required.
+              Secure your critical operations and enhance your workflow with
+              UluCore. Get started today or contact us for a personalized demo.
             </p>
-            <Link to="/login">
-              <Button size="lg" className="gap-2">
-                Create Free Account <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            <div className="flex justify-center gap-4">
+              <Link to="/login">
+                <Button size="lg" className="gap-2">
+                  Start Building <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+              <a href="mailto:contact@ulucore.com">
+                <Button size="lg" variant="outline">
+                  Request a Demo
+                </Button>
+              </a>
+            </div>
           </div>
         </section>
       </main>
