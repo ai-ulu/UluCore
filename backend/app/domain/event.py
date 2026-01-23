@@ -3,6 +3,8 @@ from datetime import datetime
 from typing import Optional
 import uuid
 
+from app.models.schemas import DecisionTrace
+
 
 @dataclass(frozen=True)
 class Event:
@@ -20,6 +22,7 @@ class Event:
     ai_available: bool = True
     metadata: Optional[dict] = None
     timestamp: datetime = field(default_factory=datetime.utcnow)
+    trace: Optional[DecisionTrace] = None
     
     def to_dict(self) -> dict:
         return {
@@ -33,4 +36,5 @@ class Event:
             "ai_available": self.ai_available,
             "metadata": self.metadata,
             "timestamp": self.timestamp.isoformat(),
+            "trace": self.trace.model_dump() if self.trace else None,
         }

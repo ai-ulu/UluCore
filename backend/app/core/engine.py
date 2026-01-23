@@ -1,7 +1,13 @@
 from datetime import datetime
 import uuid
 
-from app.models.schemas import ActionRequest, ActionResponse, ActionDecision
+from app.models.schemas import (
+    ActionRequest,
+    ActionResponse,
+    ActionDecision,
+    DecisionTrace,
+    TriggeredPolicyInfo,
+)
 from app.domain.event import Event
 from app.adapters import db
 from app.core.policies import policy_engine
@@ -25,28 +31,37 @@ class ActionEngine:
         
         ai_recommendation, ai_available = await ai_advisor.get_recommendation(request)
         
-        decision, reason = policy_engine.evaluate(request, ai_recommendation)
+        decision, reason, policy_id = await policy_engine.evaluate(request, ai_recommendation)
         
+        # Create the decision trace
+        trace = DecisionTrace(
+            ai_recommendation_summary=ai_recommendation
+        )
+        if policy_id:
+            trace.triggered_policy = TriggeredPolicyInfo(id=policy_id, reason=reason)
+
+        # Log the immutable event
         event = Event(
             id=str(uuid.uuid4()),
             action_type=request.action_type,
             resource_id=request.resource_id,
             user_id=request.user_id,
             decision=decision.value,
-            reason=reason,
+            reason=reason, # Keep original reason for detailed logging
             ai_recommendation=ai_recommendation,
             ai_available=ai_available,
             metadata=request.metadata,
             timestamp=datetime.utcnow(),
+            trace=trace,
         )
         
         await db.create_event(event)
         
+        # Return the structured response
         return ActionResponse(
-            event_id=event.id,
+            decision_id=event.id,
             decision=decision,
-            reason=reason,
-            ai_recommendation=ai_recommendation,
+            trace=trace,
             ai_available=ai_available,
             timestamp=event.timestamp,
         )
