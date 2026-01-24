@@ -1,5 +1,5 @@
 # Python imajını temel al
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 # Çalışma dizinini ayarla
 WORKDIR /app
@@ -8,10 +8,10 @@ WORKDIR /app
 RUN pip install poetry
 
 # Bağımlılık dosyalarını kopyala
-COPY poetry.lock pyproject.toml /app/
+COPY pyproject.toml /app/
 
 # Poetry'nin sanal ortam oluşturmasını engelle ve bağımlılıkları yükle
-RUN poetry config virtualenvs.create false && poetry install --no-dev --no-interaction --no-ansi
+RUN poetry config virtualenvs.create false && poetry lock && poetry install --no-root --no-interaction --no-ansi
 
 # Uygulama kodunu kopyala
 COPY . /app

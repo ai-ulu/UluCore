@@ -1,6 +1,6 @@
 from typing import Optional, Any
 from app.models.schemas import ActionRequest, ActionDecision, Policy, PolicyCondition, PolicyConditionOperator
-from app.adapters.memory_db import db
+from app.adapters import db
 
 
 class PolicyEngine:
