@@ -11,10 +11,8 @@ class ActionDecision(str, Enum):
 
 
 class ActionRequest(BaseModel):
-    action_type: str = Field(..., description="Type of action being requested")
-    resource_id: str = Field(..., description="ID of the resource being acted upon")
-    user_id: str = Field(..., description="ID of the user requesting the action")
-    metadata: Optional[dict] = Field(default=None, description="Additional context for the action")
+    action_type: str = Field(..., description="Type of action being requested, e.g., 'users.delete'")
+    context: dict = Field(..., description="A JSON object containing all relevant context for the decision")
 
 
 class TriggeredPolicyInfo(BaseModel):
@@ -113,47 +111,25 @@ class BillingWebhookPayload(BaseModel):
     data: dict
 
 
-# --- Policy Definition Models (DSL) ---
+# --- Policy Definition Models (v2 - Versioned) ---
 
-class PolicyConditionOperator(str, Enum):
-    EQUALS = "equals"
-    NOT_EQUALS = "not_equals"
-    CONTAINS = "contains"
-    NOT_CONTAINS = "not_contains"
-    STARTS_WITH = "starts_with"
-    ENDS_WITH = "ends_with"
+class PolicyCreateRequest(BaseModel):
+    """Schema for creating the first version of a policy."""
+    policy_id: str = Field(default_factory=lambda: f"pol_{uuid.uuid4().hex[:12]}", description="Unique identifier for a policy group.")
+    policy_data: dict = Field(..., description="The JSON object representing the policy rules. Must contain an 'action_type' key.")
 
+class PolicyUpdateRequest(BaseModel):
+    """Schema for updating a policy (which creates a new version)."""
+    policy_data: dict = Field(..., description="The new JSON object representing the policy rules.")
 
-class PolicyCondition(BaseModel):
-    """A single condition within a policy."""
-    field: str = Field(..., description="Field from the ActionRequest to evaluate (e.g., 'action_type', 'resource_id', 'metadata.team')")
-    operator: PolicyConditionOperator
-    value: str = Field(..., description="The value to compare against")
+class PolicyResponse(BaseModel):
+    """Response schema for a single policy version."""
+    policy_id: str
+    version: int
+    is_active: bool
+    policy_data: dict
+    created_at: datetime
 
-
-class PolicyCreate(BaseModel):
-    """Schema for creating a new policy."""
-    id: str = Field(default_factory=lambda: f"pol_{uuid.uuid4().hex[:12]}", description="Unique identifier for the policy")
-    name: str = Field(..., description="Human-readable name for the policy")
-    description: Optional[str] = None
-    conditions: list[PolicyCondition] = Field(..., description="A list of conditions. All must be true for the policy to trigger (AND logic).")
-    decision: ActionDecision = Field(..., description="The decision to make if the policy is triggered")
-    reason: str = Field(..., description="The reason to return if the policy is triggered")
-
-
-class PolicyUpdate(BaseModel):
-    """Schema for updating an existing policy."""
-    name: Optional[str] = None
-    description: Optional[str] = None
-    conditions: Optional[list[PolicyCondition]] = None
-    decision: Optional[ActionDecision] = None
-    reason: Optional[str] = None
-
-
-class Policy(PolicyCreate):
-    """Full policy schema including metadata."""
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 # --- Simulation Models ---

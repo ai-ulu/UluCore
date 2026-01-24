@@ -1,5 +1,3 @@
-from .db_postgres import PostgresDatabase
-
-db = PostgresDatabase()
+from .db_postgres import db
 
 __all__ = ["db"]
