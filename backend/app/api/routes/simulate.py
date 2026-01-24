@@ -8,7 +8,7 @@ from app.models.schemas import (
     TriggeredPolicyInfo,
 )
 from app.core.policies import policy_engine
-from app.auth.jwt import require_jwt
+from app.auth.jwt import get_current_user
 
 router = APIRouter(prefix="/simulate", tags=["Simulation"])
 
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/simulate", tags=["Simulation"])
 @router.post("", response_model=SimulationResponse, status_code=status.HTTP_200_OK)
 async def simulate_policy(
     sim_request: SimulationRequest,
-    user: dict = Depends(require_jwt),
+    user: dict = Depends(get_current_user),
 ):
     """
     Simulate a policy against an action request without creating an event.

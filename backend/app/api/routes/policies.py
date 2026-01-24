@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import List
 
 from app.models.schemas import Policy, PolicyCreate, PolicyUpdate
-from app.adapters.memory_db import db
-from app.auth.jwt import require_jwt
+from app.adapters import db
+from app.auth.jwt import get_current_user
 
 router = APIRouter(prefix="/policies", tags=["Policies"])
 
@@ -11,7 +11,7 @@ router = APIRouter(prefix="/policies", tags=["Policies"])
 @router.post("", response_model=Policy, status_code=status.HTTP_201_CREATED)
 async def create_policy(
     policy_data: PolicyCreate,
-    user: dict = Depends(require_jwt),
+    user: dict = Depends(get_current_user),
 ):
     """
     Create a new policy.
@@ -23,7 +23,7 @@ async def create_policy(
 
 @router.get("", response_model=List[Policy])
 async def list_policies(
-    user: dict = Depends(require_jwt),
+    user: dict = Depends(get_current_user),
 ):
     """
     List all policies.
@@ -35,7 +35,7 @@ async def list_policies(
 @router.get("/{policy_id}", response_model=Policy)
 async def get_policy(
     policy_id: str,
-    user: dict = Depends(require_jwt),
+    user: dict = Depends(get_current_user),
 ):
     """
     Get a specific policy by its ID.
@@ -51,7 +51,7 @@ async def get_policy(
 async def update_policy(
     policy_id: str,
     policy_data: PolicyUpdate,
-    user: dict = Depends(require_jwt),
+    user: dict = Depends(get_current_user),
 ):
     """
     Update an existing policy.
@@ -66,7 +66,7 @@ async def update_policy(
 @router.delete("/{policy_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_policy(
     policy_id: str,
-    user: dict = Depends(require_jwt),
+    user: dict = Depends(get_current_user),
 ):
     """
     Delete a policy.
