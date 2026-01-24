@@ -6,7 +6,6 @@ import {
   Lock,
   ArrowRight,
   SlidersHorizontal,
-  BarChart,
   HeartPulse,
   Landmark,
   Database,
