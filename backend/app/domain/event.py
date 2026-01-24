@@ -8,33 +8,11 @@ from app.models.schemas import DecisionTrace
 
 @dataclass(frozen=True)
 class Event:
-    """
-    Immutable Event entity.
-    Events are APPEND-ONLY - never updated or deleted.
-    """
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    action_type: str = ""
-    resource_id: str = ""
-    user_id: str = ""
-    decision: str = ""
-    reason: str = ""
-    ai_recommendation: Optional[str] = None
-    ai_available: bool = True
-    metadata: Optional[dict] = None
-    timestamp: datetime = field(default_factory=datetime.utcnow)
-    trace: Optional[DecisionTrace] = None
-    
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "action_type": self.action_type,
-            "resource_id": self.resource_id,
-            "user_id": self.user_id,
-            "decision": self.decision,
-            "reason": self.reason,
-            "ai_recommendation": self.ai_recommendation,
-            "ai_available": self.ai_available,
-            "metadata": self.metadata,
-            "timestamp": self.timestamp.isoformat(),
-            "trace": self.trace.model_dump() if self.trace else None,
-        }
+    event_id: uuid.UUID = field(default_factory=uuid.uuid4)
+    action_type: str
+    context: dict
+    decision: str
+    policy_version: Optional[int] = None
+    policy_id: Optional[str] = None
+    ai_advice: Optional[dict] = None
+    created_at: datetime = field(default_factory=datetime.utcnow)

@@ -11,10 +11,8 @@ class ActionDecision(str, Enum):
 
 
 class ActionRequest(BaseModel):
-    action_type: str = Field(..., description="Type of action being requested")
-    resource_id: str = Field(..., description="ID of the resource being acted upon")
-    user_id: str = Field(..., description="ID of the user requesting the action")
-    metadata: Optional[dict] = Field(default=None, description="Additional context for the action")
+    action_type: str = Field(..., description="Type of action being requested, e.g., 'users.delete'")
+    context: dict = Field(..., description="A JSON object containing all relevant context for the decision")
 
 
 class TriggeredPolicyInfo(BaseModel):
