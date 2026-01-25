@@ -1,158 +1,128 @@
-function parseApiUrl(url: string): { baseUrl: string; basicAuth: string | null } {
-  try {
-    const parsed = new URL(url);
-    if (parsed.username && parsed.password) {
-      const basicAuth = btoa(`${parsed.username}:${parsed.password}`);
-      parsed.username = '';
-      parsed.password = '';
-      return { baseUrl: parsed.toString().replace(/\/$/, ''), basicAuth };
-    }
-    return { baseUrl: url, basicAuth: null };
-  } catch {
-    return { baseUrl: url, basicAuth: null };
-  }
-}
+// This file will contain API-related functions and types.
 
-const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-const { baseUrl: API_URL, basicAuth: BASIC_AUTH } = parseApiUrl(rawApiUrl);
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
-interface User {
+let apiToken: string | null = localStorage.getItem('token');
+
+// --- TYPE DEFINITIONS ---
+
+export interface User {
   id: string;
   email: string;
-  name: string | null;
-  created_at: string;
+  name?: string;
 }
 
-interface AuthResponse {
-  access_token: string;
-  token_type: string;
-  user: User;
-}
-
-interface Event {
+export interface Event {
   id: string;
+  decision: 'approve' | 'reject';
   action_type: string;
   resource_id: string;
-  user_id: string;
-  decision: 'approve' | 'reject';
   reason: string;
-  ai_recommendation: string | null;
   ai_available: boolean;
-  metadata: Record<string, unknown> | null;
   timestamp: string;
 }
 
-interface Metrics {
+export interface Metrics {
   total_actions: number;
   approved_count: number;
   rejected_count: number;
   reject_rate: number;
-  ai_unavailable_count: number;
 }
 
-interface APIKey {
+export interface APIKey {
   id: string;
   name: string;
   key_prefix: string;
   created_at: string;
-  key?: string;
+  key?: string; // The full key is only returned on creation
 }
 
-interface PricingPlan {
-  id: string;
-  name: string;
-  price_monthly: number;
-  price_yearly: number;
-  features: string[];
-  actions_limit: number;
+export interface PricingPlan {
+    id: string;
+    name: string;
+    price_monthly: number;
+    price_yearly: number;
+    actions_limit: number;
+    features: string[];
 }
 
-class APIClient {
-  private token: string | null = null;
+// --- API HELPER FUNCTIONS ---
 
-  setToken(token: string | null) {
-    this.token = token;
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {}
-  ): Promise<T> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...((options.headers as Record<string, string>) || {}),
+const getAuthHeaders = () => {
+    return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiToken}`,
     };
+};
 
-    if (this.token) {
-      headers['Authorization'] = `Bearer ${this.token}`;
-    } else if (BASIC_AUTH) {
-      headers['Authorization'] = `Basic ${BASIC_AUTH}`;
-    }
+// --- API OBJECT ---
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-      ...options,
-      headers,
+export const api = {
+  setToken: (token: string | null) => {
+    apiToken = token;
+  },
+
+  login: async (email: string, password: string): Promise<{ access_token: string, user: User }> => {
+    const response = await fetch(`${API_BASE_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `username=${encodeURIComponent(email)}&password=${encodeURIComponent(password)}`
     });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ detail: 'Request failed' }));
-      throw new Error(error.detail || 'Request failed');
-    }
-
-    if (response.status === 204) {
-      return {} as T;
-    }
-
+    if (!response.ok) throw new Error('Login failed');
     return response.json();
-  }
+  },
 
-  async signup(email: string, password: string, name?: string): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/auth/signup', {
-      method: 'POST',
-      body: JSON.stringify({ email, password, name }),
+  signup: async (email: string, password: string, name?: string): Promise<{ access_token: string, user: User }> => {
+    const response = await fetch(`${API_BASE_URL}/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, full_name: name }),
     });
-  }
+    if (!response.ok) throw new Error('Signup failed');
+    return response.json();
+  },
 
-  async login(email: string, password: string): Promise<AuthResponse> {
-    return this.request<AuthResponse>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
+  getEvents: async (): Promise<Event[]> => {
+    const response = await fetch(`${API_BASE_URL}/events`, { headers: getAuthHeaders() });
+    if (!response.ok) return [];
+    return response.json();
+  },
+
+  getMetrics: async (): Promise<Metrics> => {
+    const response = await fetch(`${API_BASE_URL}/metrics`, { headers: getAuthHeaders() });
+    if (!response.ok) return { total_actions: 0, approved_count: 0, rejected_count: 0, reject_rate: 0 };
+    return response.json();
+  },
+
+  getAPIKeys: async (): Promise<APIKey[]> => {
+    const response = await fetch(`${API_BASE_URL}/apikeys`, { headers: getAuthHeaders() });
+    if (!response.ok) return [];
+    return response.json();
+  },
+
+  createAPIKey: async (name: string): Promise<APIKey> => {
+    const response = await fetch(`${API_BASE_URL}/apikeys`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ name }),
     });
-  }
+    if (!response.ok) throw new Error('Failed to create API key');
+    return response.json();
+  },
 
-  async getEvents(limit = 100, offset = 0): Promise<Event[]> {
-    return this.request<Event[]>(`/events?limit=${limit}&offset=${offset}`);
-  }
-
-  async getMetrics(): Promise<Metrics> {
-    return this.request<Metrics>('/metrics');
-  }
-
-  async getAPIKeys(): Promise<APIKey[]> {
-    return this.request<APIKey[]>('/api-keys');
-  }
-
-  async createAPIKey(name: string): Promise<APIKey> {
-    return this.request<APIKey>('/api-keys', {
-      method: 'POST',
-      body: JSON.stringify({ name }),
+  deleteAPIKey: async (id: string): Promise<void> => {
+    await fetch(`${API_BASE_URL}/apikeys/${id}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders(),
     });
-  }
+  },
 
-  async deleteAPIKey(id: string): Promise<void> {
-    return this.request<void>(`/api-keys/${id}`, {
-      method: 'DELETE',
-    });
-  }
-
-  async getPricingPlans(): Promise<PricingPlan[]> {
-    return this.request<PricingPlan[]>('/billing/plans');
-  }
-
-  async getSubscription(): Promise<{ plan: string; status: string; actions_used: number; actions_limit: number }> {
-    return this.request('/billing/subscription');
-  }
-}
-
-export const api = new APIClient();
-export type { User, AuthResponse, Event, Metrics, APIKey, PricingPlan };
+  getPricingPlans: async (): Promise<PricingPlan[]> => {
+    // This is mock data as there's no backend endpoint for it yet.
+    return Promise.resolve([
+        { id: 'free', name: 'Developer', price_monthly: 0, price_yearly: 0, actions_limit: 1000, features: ['Core Policy Engine', 'AI Advisory (Rate Limited)', '1 Project', 'Community Support'] },
+        { id: 'pro', name: 'Pro', price_monthly: 79, price_yearly: 790, actions_limit: 50000, features: ['All in Developer', 'Advanced Policies', 'No AI Rate Limit', '5 Projects', 'Email Support'] },
+        { id: 'enterprise', name: 'Enterprise', price_monthly: 0, price_yearly: 0, actions_limit: -1, features: ['All in Pro', 'Custom Policies & Integrations', 'Self-Hosted Option', 'Unlimited Projects', 'Dedicated Support & SLA'] },
+    ]);
+  },
+};

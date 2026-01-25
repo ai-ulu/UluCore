@@ -50,7 +50,6 @@ class EventResponse(BaseModel):
     ai_available: bool
     metadata: Optional[dict]
     timestamp: datetime
-    trace: Optional[DecisionTrace] = None
 
 
 class MetricsResponse(BaseModel):
@@ -134,10 +133,9 @@ class PolicyCondition(BaseModel):
 
 class PolicyCreate(BaseModel):
     """Schema for creating a new policy."""
+    id: str = Field(default_factory=lambda: f"pol_{uuid.uuid4().hex[:12]}", description="Unique identifier for the policy")
     name: str = Field(..., description="Human-readable name for the policy")
     description: Optional[str] = None
-    enabled: bool = Field(default=True, description="Whether the policy is active")
-    priority: int = Field(default=0, description="Priority of the policy. Higher numbers are checked first.")
     conditions: list[PolicyCondition] = Field(..., description="A list of conditions. All must be true for the policy to trigger (AND logic).")
     decision: ActionDecision = Field(..., description="The decision to make if the policy is triggered")
     reason: str = Field(..., description="The reason to return if the policy is triggered")
@@ -147,8 +145,6 @@ class PolicyUpdate(BaseModel):
     """Schema for updating an existing policy."""
     name: Optional[str] = None
     description: Optional[str] = None
-    enabled: Optional[bool] = None
-    priority: Optional[int] = None
     conditions: Optional[list[PolicyCondition]] = None
     decision: Optional[ActionDecision] = None
     reason: Optional[str] = None
@@ -156,7 +152,6 @@ class PolicyUpdate(BaseModel):
 
 class Policy(PolicyCreate):
     """Full policy schema including metadata."""
-    id: str = Field(..., description="Unique identifier for the policy")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

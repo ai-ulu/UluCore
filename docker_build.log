@@ -1,3 +1,0 @@
-time="2026-01-24T11:21:59Z" level=warning msg="/app/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
- Image postgres:13 Pulling
-error from registry: You have reached your unauthenticated pull rate limit. https://www.docker.com/increase-rate-limit

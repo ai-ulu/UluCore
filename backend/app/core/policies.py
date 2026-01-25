@@ -48,13 +48,7 @@ class PolicyEngine:
         """
         policies = await db.get_all_policies()
         
-        # Sort by priority, descending. Higher priority policies are checked first.
-        policies.sort(key=lambda p: p.priority, reverse=True)
-
         for policy in policies:
-            if not policy.enabled:
-                continue
-
             # All conditions must be met for a policy to trigger (AND logic)
             if all(self._check_condition(request, cond) for cond in policy.conditions):
                 return policy.decision, policy.reason, policy.id
