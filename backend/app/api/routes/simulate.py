@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, status
 
 from app.models.schemas import (
     SimulationRequest,
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/simulate", tags=["Simulation"])
 @router.post("", response_model=SimulationResponse, status_code=status.HTTP_200_OK)
 async def simulate_policy(
     sim_request: SimulationRequest,
-    user: dict = Depends(require_jwt),
+    user: dict = require_jwt,
 ):
     """
     Simulate a policy against an action request without creating an event.
@@ -33,7 +33,9 @@ async def simulate_policy(
     # We are re-implementing the core logic here for a single policy
     # to avoid database interaction and event logging.
 
-    is_triggered = all(policy_engine._check_condition(request, cond) for cond in policy.conditions)
+    is_triggered = all(
+        policy_engine._check_condition(request, cond) for cond in policy.conditions
+    )
 
     if is_triggered:
         decision = policy.decision
@@ -46,8 +48,6 @@ async def simulate_policy(
     else:
         # If the policy doesn't trigger, the default outcome is APPROVE
         decision = ActionDecision.APPROVE
-        trace = DecisionTrace(
-            triggered_policy=None
-        )
+        trace = DecisionTrace(triggered_policy=None)
 
     return SimulationResponse(decision=decision, trace=trace)

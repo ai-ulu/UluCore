@@ -14,7 +14,7 @@ async def process_action(
 ):
     """
     Process an action request.
-    
+
     Returns approve/reject decision with immutable audit log.
     Requires API key authentication.
     """

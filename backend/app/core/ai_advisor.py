@@ -13,45 +13,47 @@ GROK_API_URL = "https://api.x.ai/v1/chat/completions"
 class AIAdvisor:
     """
     AI Advisory System with Fail-Safe.
-    
+
     CRITICAL RULES:
     - AI only RECOMMENDS, never DECIDES
     - If AI is unavailable, system CONTINUES (fail-safe)
     - Decision is ALWAYS made by Policy Engine
     """
-    
+
     def __init__(self):
         self._enabled = settings.AI_ENABLED
         self._api_key = settings.AI_API_KEY
-    
-    async def get_recommendation(self, request: ActionRequest) -> tuple[Optional[str], bool]:
+
+    async def get_recommendation(
+        self, request: ActionRequest
+    ) -> tuple[Optional[str], bool]:
         """
         Get AI recommendation for an action.
-        
+
         Returns:
             tuple[Optional[str], bool]: (recommendation, ai_available)
-            
+
         If AI fails or is disabled, returns (None, False) - system continues!
         """
         if not self._enabled:
             logger.info("AI advisor is disabled")
             return None, False
-        
+
         if not self._api_key:
             logger.warning("AI API key not configured - continuing without AI")
             return None, False
-        
+
         try:
             recommendation = await self._call_grok_api(request)
             return recommendation, True
         except Exception as e:
             logger.error(f"AI service error (fail-safe activated): {e}")
             return None, False
-    
+
     async def _call_grok_api(self, request: ActionRequest) -> str:
         """
         Call Grok API for AI recommendation.
-        
+
         Uses OpenAI-compatible API format.
         """
         prompt = f"""You are a security advisor for an action decision engine. 
@@ -79,7 +81,10 @@ Be concise and focus on security implications."""
                 json={
                     "model": "grok-beta",
                     "messages": [
-                        {"role": "system", "content": "You are a security advisor. Be concise."},
+                        {
+                            "role": "system",
+                            "content": "You are a security advisor. Be concise.",
+                        },
                         {"role": "user", "content": prompt},
                     ],
                     "max_tokens": 100,
@@ -89,7 +94,7 @@ Be concise and focus on security implications."""
             response.raise_for_status()
             data = response.json()
             return data["choices"][0]["message"]["content"].strip()
-    
+
     def is_available(self) -> bool:
         """Check if AI service is available"""
         return self._enabled and bool(self._api_key)

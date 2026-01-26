@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 
 from app.models.schemas import PricingPlan, BillingWebhookPayload
 from app.auth.jwt import get_current_user
@@ -56,7 +56,7 @@ PRICING_PLANS = [
 async def get_pricing_plans():
     """
     Get available pricing plans.
-    
+
     Public endpoint - no authentication required.
     """
     return PRICING_PLANS
@@ -66,22 +66,22 @@ async def get_pricing_plans():
 async def stripe_webhook(payload: BillingWebhookPayload):
     """
     Stripe webhook endpoint.
-    
+
     Handles subscription events from Stripe.
     In production, verify webhook signature with STRIPE_WEBHOOK_SECRET.
     """
     if not settings.STRIPE_WEBHOOK_SECRET:
         pass
-    
+
     event_type = payload.event_type
-    
+
     if event_type == "checkout.session.completed":
         pass
     elif event_type == "customer.subscription.updated":
         pass
     elif event_type == "customer.subscription.deleted":
         pass
-    
+
     return {"status": "received"}
 
 
@@ -91,7 +91,7 @@ async def get_subscription(
 ):
     """
     Get current user's subscription status.
-    
+
     Requires JWT authentication.
     """
     return {

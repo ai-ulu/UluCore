@@ -12,6 +12,7 @@ class Event:
     Immutable Event entity.
     Events are APPEND-ONLY - never updated or deleted.
     """
+
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     action_type: str = ""
     resource_id: str = ""
@@ -23,7 +24,7 @@ class Event:
     metadata: Optional[dict] = None
     timestamp: datetime = field(default_factory=datetime.utcnow)
     trace: Optional[DecisionTrace] = None
-    
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,

@@ -17,7 +17,7 @@ async def get_events(
 ):
     """
     Get audit log events.
-    
+
     Events are immutable - append only, never updated or deleted.
     Requires JWT authentication.
     """
