@@ -8,26 +8,28 @@ from app.auth.api_key import generate_api_key
 router = APIRouter(prefix="/api-keys", tags=["API Keys"])
 
 
-@router.post("", response_model=APIKeyCreatedResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "", response_model=APIKeyCreatedResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_api_key(
     request: APIKeyCreate,
     current_user: dict = Depends(get_current_user),
 ):
     """
     Create a new API key.
-    
+
     The full key is only returned once - store it securely!
     Requires JWT authentication.
     """
     key, key_hash, key_prefix = generate_api_key()
-    
+
     api_key = await db.create_api_key(
         user_id=current_user["id"],
         name=request.name,
         key_hash=key_hash,
         key_prefix=key_prefix,
     )
-    
+
     return APIKeyCreatedResponse(
         id=api_key["id"],
         name=api_key["name"],
@@ -43,7 +45,7 @@ async def list_api_keys(
 ):
     """
     List all API keys for the current user.
-    
+
     Note: Full keys are not returned - only prefixes.
     Requires JWT authentication.
     """
@@ -66,7 +68,7 @@ async def delete_api_key(
 ):
     """
     Delete an API key.
-    
+
     Requires JWT authentication.
     """
     deleted = await db.delete_api_key(key_id, current_user["id"])
