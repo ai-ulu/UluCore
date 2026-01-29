@@ -1,61 +1,126 @@
-# UluCore Projesi: Kod ve Arayüz Analizi
+# UluCore Enterprise-Grade Analiz Raporu
 
-## 1. Özet
+Bu rapor, projenin mevcut durumunu "ENTERPRISE / PRODUCTION-GRADE SOFTWARE CHECKLIST" maddelerine göre değerlendirmektedir. Proje şu anda bir MVP (Minimum Viable Product) aşamasındadır ve kurumsal (enterprise) seviyeye geçiş için yapılması gereken önemli geliştirmeler bulunmaktadır.
 
-Bu rapor, UluCore projesinin kod tabanının, `ulucore.ai-ulu.com` web sitesinin (yerel olarak `frontend/src/pages/Home.tsx` dosyası üzerinden incelenmiştir) "landing page"inde sunulan özelliklerle ne kadar uyumlu olduğunu analiz etmektedir.
+---
 
-**Genel Değerlendirme:** Projenin landing page'i, kodun mevcut yeteneklerini **doğru ve tutarlı bir şekilde** yansıtmaktadır. Kullanıcılara sunulan vaatler ile backend'in sağladığı işlevsellik arasında önemli bir tutarsızlık bulunmamaktadır. Kod, "Action Decision Engine with AI Advisory" olarak tanımlanan ana ürünle uyumlu, sağlam ve iyi yapılandırılmış bir temel sunmaktadır.
+## 🧠 ALTIN KURAL (DEĞİŞMEZ)
 
-## 2. Özellik Doğrulaması
+*   **1000 kullanıcı aynı anda yaparsa:**
+    *   **Durum:** ❌ Eksik.
+    *   **Analiz:** Backend `async` yapıda olsa da, `InMemoryDatabase` global bir liste kullanıyor ve herhangi bir kilitleme (locking) mekanizması yok. Supabase adaptörü de metrik hesaplamalarında tüm veriyi belleğe çekiyor, bu da yüksek yük altında çökmeye neden olabilir.
+*   **Aynı işlem iki kez çalışırsa:**
+    *   **Durum:** ❌ Eksik.
+    *   **Analiz:** `/action` endpoint'inde ve diğer kritik akışlarda **Idempotency Key** desteği bulunmuyor. Aynı istek iki kez gelirse iki ayrı işlem yapılır ve iki ayrı olay günlüğe kaydedilir.
+*   **İşlem yarıda kalırsa:**
+    *   **Durum:** ❌ Eksik.
+    *   **Analiz:** Veritabanı işlemleri için **Transaction** sınırları net değil. Özellikle Supabase veya gerçek bir SQL veritabanına geçildiğinde atomik işlemler hayati önem taşıyacak.
 
-Landing page'de öne çıkan temel ilkeler ve özellikler aşağıda listelenmiş ve kod tabanındaki karşılıkları ile doğrulanmıştır.
+---
 
-### a. Action Decision Engine with AI Advisory (Yapay Zeka Danışmanlı Eylem Karar Motoru)
+## 1️⃣ Database & ORM
 
--   **Landing Page Vaadi:** "Deterministik politikalar + Yapay zeka tavsiyeleri = güvenilir kararlar ve değiştirilemez denetim günlükleri."
--   **Kod Doğrulaması:** Bu, projenin ana işlevidir ve `backend/app/core/engine.py` içindeki `ActionEngine` sınıfı tarafından yönetilmektedir.
-    -   `process_action` metodu, bir eylem talebini alır.
-    -   `ai_advisor.get_recommendation` çağrısı ile yapay zeka tavsiyesi alınır.
-    -   `policy_engine.evaluate` çağrısı ile nihai karar verilir.
-    -   Sonuç, `db.create_event` ile değiştirilemez bir olay olarak kaydedilir.
--   **Sonuç:** **Doğrulandı.** Kod, bu süreci tam olarak uygulamaktadır.
+*   **[❌] N+1 yok:** `SupabaseDatabase.get_metrics` tüm kayıtları çekip Python tarafında filtreliyor. Bu büyük tablolarda ciddi performans sorunudur.
+*   **[❌] SELECT * yok:** Supabase adaptöründe neredeyse tüm sorgular `.select("*")` kullanıyor.
+*   **[❌] OFFSET pagination büyük tabloda yok:** `get_events` metodunda hem bellek içi hem Supabase tarafında OFFSET pagination kullanılıyor.
+*   **[❌] Cursor pagination:** Henüz uygulanmadı.
+*   **[❌] Soft delete:** Henüz uygulanmadı.
+*   **[❌] UTC standardı sabit:** `datetime.utcnow()` kullanılıyor (Python 3.12 ile deprecated oldu, `timezone.utc` kullanılmalı).
 
-### b. Fail-Safe AI (Hata Toleranslı Yapay Zeka)
+---
 
--   **Landing Page Vaadi:** "Yapay zeka tavsiye eder, asla karar vermez. Yapay zeka kullanılamıyorsa, sistem politika tabanlı kararlarla çalışmaya devam eder."
--   **Kod Doğrulaması:** Bu mekanizma `backend/app/core/ai_advisor.py` dosyasında açıkça görülmektedir.
-    -   `get_recommendation` metodu, AI servisinden bir hata alınması veya servisin devre dışı bırakılması durumunda `(None, False)` döner.
-    -   `ActionEngine`, bu yanıta rağmen `policy_engine` ile karar verme sürecine devam eder.
-    -   `PolicyEngine` (`policies.py`), yapay zeka tavsiyesini bir girdi olarak dikkate alabilir ancak nihai kararı her zaman kendi kurallarına göre verir.
--   **Sonuç:** **Doğrulandı.** Sistem, yapay zeka hizmetinin kesintilerine karşı dayanıklıdır.
+## 2️⃣ Performans
 
-### c. Immutable Events (Değiştirilemez Olaylar)
+*   **[❌] O(n²) loop yok:** Metrik hesaplamaları ve bellek içi DB'deki sıralama işlemleri O(n) veya O(n log n) seviyesinde ve her istekte tekrarlanıyor.
+*   **[❌] Senkron I/O request içinde yok:** AI Advisor 10 saniyelik bir timeout ile bekliyor. Bu, AI yavaşladığında tüm request thread'lerini tıkayabilir.
 
--   **Landing Page Vaadi:** "Her karar, değiştirilemez bir olay olarak günlüğe kaydedilir. Güncelleme veya silme yok - tam denetim izi garantisi."
--   **Kod Doğrulaması:** `backend/app/adapters/db.py` dosyasındaki `create_event` fonksiyonu, olayları `events` adlı bir liste içinde in-memory olarak saklamaktadır. Mevcut implementasyonda olayları güncellemek veya silmek için bir fonksiyon bulunmamaktadır, bu da "append-only" (sadece eklemeye yönelik) yapıyı doğrular.
--   **Sonuç:** **Doğrulandı.** MVP (Minimum Viable Product) için bu yaklaşım vaadi karşılamaktadır. Üretim ortamında kalıcı bir veritabanı (örneğin, olay odaklı bir veritabanı veya blockchain) kullanılması bu özelliği daha da güçlendirecektir.
+---
 
-### d. API-First SaaS
+## 3️⃣ Cache & Tutarlılık
 
--   **Landing Page Vaadi:** "Geliştiriciler için tasarlandı. JWT ve API anahtarı kimlik doğrulamasına sahip basit REST API."
--   **Kod Doğrulaması:** `backend/app/api/routes` dizini, bu API'yi oluşturan tüm endpoint'leri içermektedir.
-    -   `auth.py`: JWT tabanlı kullanıcı oluşturma (`/signup`) ve giriş (`/login`) işlemlerini yönetir.
-    -   `api_keys.py`: Kullanıcıların API anahtarı oluşturmasını sağlar.
-    -   `action.py`: `/action` endpoint'i, `require_api_key` bağımlılığı ile korunmaktadır.
--   **Sonuç:** **Doğrulandı.** Kod, API öncelikli bir yaklaşımla tasarlanmıştır.
+*   **[❌] Tüm maddeler:** Henüz uygulanmadı. Sistemde herhangi bir caching katmanı (Redis vb.) bulunmuyor.
 
-## 3. Kodda Bulunan Ancak Landing Page'de Yer Almayan Özellikler
+---
 
-Aşağıdaki özellikler kodda mevcuttur ancak landing page'de doğrudan pazarlanmamaktadır. Bunlar, gelecekteki pazarlama materyallerinde veya ürün özellik listelerinde vurgulanabilir.
+## 4️⃣ Concurrency & Paralellik
 
--   **Özelleştirilebilir Politikalar (Potansiyel):** `PolicyEngine` sınıfında `add_policy` adında bir metod bulunmaktadır. Bu, çalışma zamanında yeni politika kurallarının eklenebileceğini göstermektedir. Bu, kullanıcılara kendi iş mantıklarına göre özel kurallar tanımlama yeteneği sunan çok güçlü bir özelliktir. Landing page'de bundan bahsedilmemektedir.
--   **Metrikler ve İzleme:** `backend/app/api/routes/metrics.py` dosyası, sistemdeki eylemler, onaylar ve retler hakkında metrikler sağlayan bir `/metrics` endpoint'i sunar. Bu, sistemin durumu ve performansı hakkında bilgi edinmek için değerli bir özelliktir.
--   **Faturalandırma Altyapısı:** `backend/app/api/routes/billing.py` dosyası, fiyatlandırma planlarını listeleyen bir `/billing/plans` endpoint'i içerir. Bu, projenin ticari bir SaaS ürünü olma niyetini göstermektedir ve altyapısı mevcuttur.
+*   **[❌] Idempotency key var:** Henüz uygulanmadı.
+*   **[❌] Atomic operation:** Henüz uygulanmadı.
 
-## 4. Öneriler
+---
 
-1.  **"Özelleştirilebilir Kurallar" Özelliğini Vurgulayın:** `add_policy` fonksiyonunun varlığı, projenin en güçlü yanlarından biri olabilir. Landing page'de "Kendi Kurallarınızı Tanımlayın" veya "Esnek Politika Motoru" gibi bir başlıkla bu özelliğin tanıtılması, projenin hedef kitlesi için çekiciliğini artırabilir.
-2.  **Dashboard Görseli Ekleyin:** `frontend/src/pages/Dashboard.tsx` dosyası, kullanıcıların denetim günlüklerini ve metrikleri görebileceği bir arayüz sunmaktadır. Landing page'e bu dashboard'un bir ekran görüntüsünü veya bir demosunu eklemek, ürünün soyut faydalarını somutlaştırarak kullanıcıların ilgisini çekebilir.
-3.  **Fiyatlandırma Sayfasını Detaylandırın:** `Pricing.tsx` sayfası mevcut olsa da, `Home.tsx`'teki "Ücretsiz başlayın" ifadesi dışında detaylı bir bilgi sunulmamaktadır. Fiyatlandırma planlarını (örneğin, Ücretsiz, Pro, Kurumsal) ve her birinin sunduğu limitleri (örneğin, aylık eylem sayısı, özel kural sayısı) net bir şekilde listeleyen bir bölüm eklemek, potansiyel müşteriler için karar verme sürecini kolaylaştıracaktır.
+## 5️⃣ Distributed Systems
 
-Bu analiz, projenin mevcut durumunu yansıtmaktadır ve geliştirme ekibinin pazarlama materyallerini kodun yetenekleriyle uyumlu hale getirmesine yardımcı olmayı amaçlamaktadır.
+*   **[✅] Timeout tanımlı:** AI Advisor için 10s timeout var.
+*   **[❌] Retry / Circuit Breaker:** Henüz uygulanmadı. AI servisi kesilirse "fail-safe" çalışıyor ama retry mekanizması yok.
+
+---
+
+## 6️⃣ API & Entegrasyon
+
+*   **[❌] API versioning:** Henüz uygulanmadı. Endpoint'ler doğrudan kök dizinde (`/action`, `/events`).
+*   **[❌] Rate limit:** Henüz uygulanmadı.
+*   **[❌] Webhook signature doğrulama:** `billing.py` içinde webhook imzası doğrulanmıyor (kodda TODO olarak bırakılmış).
+
+---
+
+## 7️⃣ Security (Temel)
+
+*   **[❌] JWT expiry/refresh doğru:** Sadece expiry var, **Refresh Token** mekanizması yok.
+*   **[❌] Secrets koda gömülü değil:** Çoğunlukla `.env` üzerinden, ancak `JWT_SECRET` için fallback olarak rastgele string üretiliyor. Bu, server restart olduğunda tüm session'ların düşmesine neden olur.
+*   **[❌] CORS:** Varsayılan olarak `*` (her yere açık), bu kurumsal seviyede kabul edilemez.
+
+---
+
+## 8️⃣ Frontend / Mobile
+
+*   **[✅] Double submit engelli:** API anahtarı oluşturma gibi işlemlerde loading state ile buton disable ediliyor.
+*   **[✅] Loading / error / empty state:** Temel seviyede var.
+*   **[❌] List virtualization:** Audit log listesi virtualization olmadan render ediliyor, binlerce kayıt olduğunda tarayıcıyı yoracaktır.
+
+---
+
+## 9️⃣ Ödeme / Kritik Akışlar
+
+*   **[❌] Idempotency zorunlu:** Henüz uygulanmadı.
+*   **[❌] Webhook duplicate handling:** Henüz uygulanmadı.
+
+---
+
+## 🔟 Test & Release
+
+*   **[❌] Unit + integration test:** `backend/tests` dizini boş. Hiç test yazılmamış.
+*   **[❌] Rollback planı:** Henüz uygulanmadı.
+
+---
+
+## 1️⃣1️⃣ Observability
+
+*   **[❌] Correlation ID:** Henüz uygulanmadı.
+*   **[❌] Metric (latency/error/saturation):** Sadece temel iş mantığı metrikleri var, sistem performans metrikleri yok.
+
+---
+
+## 1️⃣2️⃣ Infrastructure & DevOps
+
+*   **[❌] Non-root container:** Dockerfile'da kullanıcı tanımlanmamış, root olarak çalışıyor.
+*   **[❌] Read-only filesystem:** Henüz uygulanmadı.
+
+---
+
+## 1️⃣3️⃣ Veri & Compliance
+
+*   **[❌] Backup / Restore:** Supabase tarafında yönetiliyor olabilir ancak bir politika tanımlanmamış.
+*   **[❌] PII masking:** Loglarda kullanıcı e-postaları açıkça görünebilir.
+
+---
+
+## 🎯 SONUÇ VE ÖNERİLER
+
+UluCore, çekirdek mantığı (Action Engine + AI Advisor) açısından sağlam bir fikre sahip olsa da, **Enterprise-Grade** bir yazılım olması için aşağıdaki 3 konu önceliklendirilmelidir:
+
+1.  **Güvenlik:** JWT Refresh Token ve sabit `JWT_SECRET` kullanımı, CORS kısıtlamaları.
+2.  **Performans ve Ölçeklenebilirlik:** Metrik hesaplamalarının DB tarafına (SQL) çekilmesi, Caching ve Cursor Pagination.
+3.  **Güvenilirlik (Reliability):** Idempotency anahtarları, Transaction yönetimi ve Kapsamlı Test paketi.
+
+Bu kontrol listesi, bundan sonraki her PR'da bir rehber olarak kullanılmalı ve kademeli olarak "Henüz uygulanmadı" maddeleri "Tamamlandı"ya çevrilmelidir.
