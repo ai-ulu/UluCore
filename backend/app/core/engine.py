@@ -1,5 +1,6 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
+import asyncio
 
 from app.models.schemas import (
     ActionRequest,
@@ -28,40 +29,47 @@ class ActionEngine:
     async def process_action(self, request: ActionRequest) -> ActionResponse:
         """Process an action request and return decision"""
 
-        ai_recommendation, ai_available = await ai_advisor.get_recommendation(request)
+        # Fire-and-forget AI recommendation to remove it from the request path.
+        # This ensures decision latency remains low and deterministic.
+        # Note: In a production system, this result would be logged to a separate
+        # table or linked via correlation ID.
+        asyncio.create_task(ai_advisor.get_recommendation(request))
 
-        decision, reason, policy_id = await policy_engine.evaluate(
-            request, ai_recommendation
-        )
+        async with db.transaction():
+            decision, reason, policy_id, policy_version = await policy_engine.evaluate(
+                request
+            )
 
-        # Create the decision trace
-        trace = DecisionTrace(ai_recommendation_summary=ai_recommendation)
-        if policy_id:
-            trace.triggered_policy = TriggeredPolicyInfo(id=policy_id, reason=reason)
+            # Create the decision trace
+            trace = DecisionTrace(ai_recommendation_summary="Pending (Async)")
+            if policy_id:
+                trace.triggered_policy = TriggeredPolicyInfo(
+                    id=policy_id, version=policy_version or 1, reason=reason
+                )
 
-        # Log the immutable event
-        event = Event(
-            id=str(uuid.uuid4()),
-            action_type=request.action_type,
-            resource_id=request.resource_id,
-            user_id=request.user_id,
-            decision=decision.value,
-            reason=reason,  # Keep original reason for detailed logging
-            ai_recommendation=ai_recommendation,
-            ai_available=ai_available,
-            metadata=request.metadata,
-            timestamp=datetime.utcnow(),
-            trace=trace,
-        )
+            # Log the immutable event
+            event = Event(
+                id=str(uuid.uuid4()),
+                action_type=request.action_type,
+                resource_id=request.resource_id,
+                user_id=request.user_id,
+                decision=decision.value,
+                reason=reason,  # Keep original reason for detailed logging
+                ai_recommendation="Pending (Async)",
+                ai_available=ai_advisor.is_available(),
+                metadata=request.metadata,
+                timestamp=datetime.now(timezone.utc),
+                trace=trace,
+            )
 
-        await db.create_event(event)
+            await db.create_event(event)
 
         # Return the structured response
         return ActionResponse(
             decision_id=event.id,
             decision=decision,
             trace=trace,
-            ai_available=ai_available,
+            ai_available=ai_advisor.is_available(),
             timestamp=event.timestamp,
         )
 

@@ -69,3 +69,22 @@ class BaseDatabase(ABC):
     async def delete_api_key(self, key_id: str, user_id: str) -> bool:
         """Delete an API key"""
         pass
+
+    # --- Idempotency ---
+
+    @abstractmethod
+    async def get_idempotency_record(self, key: str, user_id: str) -> Optional[dict]:
+        """Get an idempotency record by key and user_id"""
+        pass
+
+    @abstractmethod
+    async def create_idempotency_record(
+        self, key: str, user_id: str, response_body: dict, status_code: int = 200
+    ) -> dict:
+        """Create a new idempotency record"""
+        pass
+
+    @abstractmethod
+    def transaction(self):
+        """Context manager for database transactions"""
+        pass

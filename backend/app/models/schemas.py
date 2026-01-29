@@ -1,7 +1,7 @@
 import uuid
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -23,6 +23,7 @@ class TriggeredPolicyInfo(BaseModel):
     """Details of the policy that made the final decision."""
 
     id: str = Field(..., description="Name or ID of the triggered policy")
+    version: int = Field(default=1, description="The version of the policy")
     reason: str = Field(..., description="The reason provided by the policy")
 
 
@@ -156,6 +157,8 @@ class PolicyCreate(BaseModel):
     )
     name: str = Field(..., description="Human-readable name for the policy")
     description: Optional[str] = None
+    version: int = Field(default=1, description="Policy version number")
+    is_active: bool = Field(default=True, description="Whether this version is active")
     conditions: list[PolicyCondition] = Field(
         ...,
         description="A list of conditions. All must be true for the policy to trigger (AND logic).",
@@ -181,8 +184,8 @@ class PolicyUpdate(BaseModel):
 class Policy(PolicyCreate):
     """Full policy schema including metadata."""
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 # --- Simulation Models ---
@@ -200,4 +203,4 @@ class SimulationResponse(BaseModel):
 
     decision: ActionDecision
     trace: DecisionTrace
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

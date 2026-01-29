@@ -49,29 +49,25 @@ class PolicyEngine:
         return False
 
     async def evaluate(
-        self, request: ActionRequest, ai_recommendation: Optional[str] = None
-    ) -> tuple[ActionDecision, str, Optional[str]]:
+        self, request: ActionRequest
+    ) -> tuple[ActionDecision, str, Optional[str], Optional[int]]:
         """
         Evaluate request against dynamically loaded policies from the database.
-        Returns (decision, reason, policy_id).
+        Returns (decision, reason, policy_id, version).
+
+        AI is removed from the decision path to ensure determinism and performance.
+        AI recommendations are now handled asynchronously as advisory only.
         """
         policies = await db.get_all_policies()
+        # Only evaluate active policies
+        active_policies = [p for p in policies if p.is_active]
 
-        for policy in policies:
+        for policy in active_policies:
             # All conditions must be met for a policy to trigger (AND logic)
             if all(self._check_condition(request, cond) for cond in policy.conditions):
-                return policy.decision, policy.reason, policy.id
+                return policy.decision, policy.reason, policy.id, policy.version
 
-        # Fallback to AI recommendation if no deterministic policy matched
-        if ai_recommendation:
-            if (
-                "reject" in ai_recommendation.lower()
-                or "deny" in ai_recommendation.lower()
-            ):
-                reason = f"Rejected based on AI recommendation: {ai_recommendation}"
-                return ActionDecision.REJECT, reason, "ai_recommendation"
-
-        return ActionDecision.APPROVE, "Action approved by default", None
+        return ActionDecision.APPROVE, "Action approved by default", None, None
 
 
 policy_engine = PolicyEngine()

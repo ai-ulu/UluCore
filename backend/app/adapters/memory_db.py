@@ -1,6 +1,8 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
+import asyncio
+from contextlib import asynccontextmanager
 
 from app.adapters.base_db import BaseDatabase
 from app.domain.event import Event
@@ -18,6 +20,8 @@ class InMemoryDatabase(BaseDatabase):
         self._users: dict[str, dict] = {}
         self._api_keys: dict[str, dict] = {}
         self._policies: dict[str, Policy] = {}
+        self._idempotency_keys: dict[str, dict] = {}
+        self._lock = asyncio.Lock()
 
     async def create_event(self, event: Event) -> Event:
         self._events.append(event)
@@ -61,7 +65,7 @@ class InMemoryDatabase(BaseDatabase):
             "email": email,
             "password_hash": password_hash,
             "name": name,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }
         self._users[user_id] = user
         return user
@@ -85,7 +89,7 @@ class InMemoryDatabase(BaseDatabase):
             "name": name,
             "key_hash": key_hash,
             "key_prefix": key_prefix,
-            "created_at": datetime.utcnow(),
+            "created_at": datetime.now(timezone.utc),
         }
         self._api_keys[key_id] = api_key
         return api_key
@@ -121,13 +125,21 @@ class InMemoryDatabase(BaseDatabase):
     async def update_policy(
         self, policy_id: str, policy_data: PolicyUpdate
     ) -> Optional[Policy]:
+        """
+        In an enterprise-grade system, policies are immutable.
+        Updating a policy creates a new version or updates the current active version
+        while keeping history. For MVP, we'll increment the version number.
+        """
         policy = self._policies.get(policy_id)
         if not policy:
             return None
 
         update_data = policy_data.model_dump(exclude_unset=True)
+        # Increment version on update
+        update_data["version"] = policy.version + 1
+
         updated_policy = policy.model_copy(update=update_data)
-        updated_policy.updated_at = datetime.utcnow()
+        updated_policy.updated_at = datetime.now(timezone.utc)
         self._policies[policy_id] = updated_policy
         return updated_policy
 
@@ -136,6 +148,31 @@ class InMemoryDatabase(BaseDatabase):
             del self._policies[policy_id]
             return True
         return False
+
+    # --- Idempotency ---
+
+    async def get_idempotency_record(self, key: str, user_id: str) -> Optional[dict]:
+        lookup_key = f"{user_id}:{key}"
+        return self._idempotency_keys.get(lookup_key)
+
+    async def create_idempotency_record(
+        self, key: str, user_id: str, response_body: dict, status_code: int = 200
+    ) -> dict:
+        lookup_key = f"{user_id}:{key}"
+        record = {
+            "key": key,
+            "user_id": user_id,
+            "response_body": response_body,
+            "status_code": status_code,
+            "created_at": datetime.now(timezone.utc),
+        }
+        self._idempotency_keys[lookup_key] = record
+        return record
+
+    @asynccontextmanager
+    async def transaction(self):
+        async with self._lock:
+            yield
 
 
 db = InMemoryDatabase()

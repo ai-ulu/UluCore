@@ -1,6 +1,7 @@
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
+from contextlib import asynccontextmanager
 
 from supabase import create_client, Client
 
@@ -115,12 +116,13 @@ class SupabaseDatabase(BaseDatabase):
         self, email: str, password_hash: str, name: Optional[str] = None
     ) -> dict:
         user_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
         user = {
             "id": user_id,
             "email": email,
             "password_hash": password_hash,
             "name": name,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": now.isoformat(),
         }
         self._client.table("users").insert(user).execute()
         return {
@@ -128,7 +130,7 @@ class SupabaseDatabase(BaseDatabase):
             "email": email,
             "password_hash": password_hash,
             "name": name,
-            "created_at": datetime.utcnow(),
+            "created_at": now,
         }
 
     async def get_user_by_email(self, email: str) -> Optional[dict]:
@@ -169,13 +171,14 @@ class SupabaseDatabase(BaseDatabase):
         self, user_id: str, name: str, key_hash: str, key_prefix: str
     ) -> dict:
         key_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
         api_key = {
             "id": key_id,
             "user_id": user_id,
             "name": name,
             "key_hash": key_hash,
             "key_prefix": key_prefix,
-            "created_at": datetime.utcnow().isoformat(),
+            "created_at": now.isoformat(),
         }
         self._client.table("api_keys").insert(api_key).execute()
         return {
@@ -184,7 +187,7 @@ class SupabaseDatabase(BaseDatabase):
             "name": name,
             "key_hash": key_hash,
             "key_prefix": key_prefix,
-            "created_at": datetime.utcnow(),
+            "created_at": now,
         }
 
     async def get_api_keys_by_user(self, user_id: str) -> list[dict]:
@@ -241,3 +244,39 @@ class SupabaseDatabase(BaseDatabase):
             .execute()
         )
         return len(result.data) > 0
+
+    # --- Idempotency ---
+
+    async def get_idempotency_record(self, key: str, user_id: str) -> Optional[dict]:
+        result = (
+            self._client.table("idempotency_keys")
+            .select("*")
+            .eq("key", key)
+            .eq("user_id", user_id)
+            .execute()
+        )
+        if not result.data:
+            return None
+        return result.data[0]
+
+    async def create_idempotency_record(
+        self, key: str, user_id: str, response_body: dict, status_code: int = 200
+    ) -> dict:
+        record = {
+            "key": key,
+            "user_id": user_id,
+            "response_body": response_body,
+            "status_code": status_code,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self._client.table("idempotency_keys").insert(record).execute()
+        return record
+
+    @asynccontextmanager
+    async def transaction(self):
+        """
+        Supabase/PostgREST doesn't support transactions via the client in a simple way.
+        Multi-table transactions should be implemented via Postgres Functions (RPC).
+        For now, this is a placeholder.
+        """
+        yield
