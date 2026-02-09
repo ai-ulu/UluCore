@@ -1,0 +1,21 @@
+{
+  "version": "1.0.0",
+  "initialized_at": "2026-02-09T05:28:48.362444",
+  "classification": "unicorn",
+  "agents": {
+    "repair_agent": true,
+    "watcher": true,
+    "chaos_monkey": true,
+    "auto_fix": true,
+    "predictive": true
+  },
+  "monitoring": {
+    "enabled": true,
+    "webhook_url": null,
+    "alert_threshold": "medium"
+  },
+  "memory": {
+    "type": "file",
+    "path": ".ai-ulu/memory.json"
+  }
+}

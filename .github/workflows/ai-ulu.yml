@@ -1,0 +1,39 @@
+name: AI-ULU Autonomous Operations
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  issues:
+    types: [opened, edited]
+  schedule:
+    - cron: '0 */6 * * *'  # Every 6 hours
+
+jobs:
+  ai-ulu-monitor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: AI-ULU Health Check
+        uses: ai-ulu/action@v1
+        with:
+          command: health-check
+          config: .ai-ulu/config.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Auto-Fix Issues
+        if: github.event_name == 'issues'
+        uses: ai-ulu/action@v1
+        with:
+          command: auto-fix
+          issue_number: ${{ github.event.issue.number }}
+          
+      - name: Predictive Analysis
+        if: github.event_name == 'schedule'
+        uses: ai-ulu/action@v1
+        with:
+          command: predict
+          threshold: 0.75
