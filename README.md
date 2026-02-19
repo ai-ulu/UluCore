@@ -5,19 +5,22 @@ Action Decision Engine with AI Advisory - A production-ready SaaS backend platfo
 ## Features
 
 - **Action Decision Engine**: Submit actions via API and receive approve/reject decisions
-- **Deterministic Policy Engine**: Rule-based decision making
+- **Deterministic Policy Engine**: Rule-based decision making with versioning
 - **AI Advisory (Fail-Safe)**: AI recommendations that never block the system
-- **Immutable Audit Logging**: Append-only event logs
+- **Immutable Audit Logging**: Append-only event logs with PostgreSQL persistence
 - **JWT + API Key Authentication**: Secure access control
 - **Metrics Aggregation**: Track actions, approvals, rejections
+- **Idempotency Support**: X-Idempotency-Key for exactly-once processing
+- **Multi-Database Support**: PostgreSQL, Supabase, In-Memory
 
 ## Tech Stack
 
 ### Backend
 - FastAPI
 - Python 3.12
+- PostgreSQL / Supabase / In-Memory
 - JWT Authentication
-- In-memory database (MVP)
+- API Key Authentication
 
 ### Frontend
 - React + TypeScript
@@ -53,10 +56,13 @@ Action Decision Engine with AI Advisory - A production-ready SaaS backend platfo
 
 - `POST /auth/signup` - Create account
 - `POST /auth/login` - Login
-- `POST /action` - Submit action for decision (API Key required)
+- `POST /action` - Submit action for decision (API Key + Idempotency)
+- `POST /action/check` - Submit action for decision (JWT)
 - `GET /events` - Get audit logs (JWT required)
 - `GET /metrics` - Get metrics (JWT required)
 - `POST /api-keys` - Create API key (JWT required)
+- `GET /policies` - List policies (JWT required)
+- `POST /policies` - Create policy (JWT required)
 - `GET /billing/plans` - Get pricing plans
 - `GET /health` - Health check
 
