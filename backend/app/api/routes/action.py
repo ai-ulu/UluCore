@@ -10,6 +10,10 @@ router = APIRouter(prefix="/action", tags=["Action"])
 
 @router.post("/check", response_model=ActionResponse)
 async def check_action(request: ActionRequest, current_user: dict = Depends(get_current_user)):
+    """
+    This is the core endpoint of UluCore.
+    It performs a check, makes a decision, and creates an immutable event log.
+    """
     user_id = current_user.get("id")
     if not user_id:
         raise HTTPException(status_code=400, detail="User ID not found in token")
