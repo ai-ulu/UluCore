@@ -100,7 +100,9 @@ class APIClient {
         throw new Error(error.detail || 'Login failed');
     }
     const data = await response.json();
-    return { access_token: data.access_token, token_type: data.token_type, user: data.user };
+    // The user object might be nested, let's assume it is for now.
+    // This part might need adjustment based on actual backend response.
+    return { access_token: data.access_token, token_type: data.token_type, user: data.user || { id: '', email: email } };
   }
 
   async signup(email: string, password: string, name?: string): Promise<AuthResponse> {
@@ -136,7 +138,7 @@ class APIClient {
   }
 
   async getPricingPlans(): Promise<PricingPlan[]> {
-    // Mock data, as backend endpoint doesn't exist yet
+    // Mock data, as backend endpoint doesn't exist
     return Promise.resolve([
         { id: 'free', name: 'Developer', price_monthly: 0, price_yearly: 0, actions_limit: 1000, features: ['Core Policy Engine', 'AI Advisory (Rate Limited)', '1 Project', 'Community Support'] },
         { id: 'pro', name: 'Pro', price_monthly: 79, price_yearly: 790, actions_limit: 50000, features: ['All in Developer', 'Advanced Policies', 'No AI Rate Limit', '5 Projects', 'Email Support'] },

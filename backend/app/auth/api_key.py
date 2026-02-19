@@ -22,17 +22,19 @@ def hash_api_key(key: str) -> str:
     return hashlib.sha256(key.encode()).hexdigest()
 
 
-async def get_api_key_user(api_key: Optional[str] = Depends(api_key_header)) -> Optional[dict]:
+async def get_api_key_user(
+    api_key: Optional[str] = Depends(api_key_header),
+) -> Optional[dict]:
     """Validate API key and return associated user"""
     if not api_key:
         return None
-    
+
     key_hash = hash_api_key(api_key)
     api_key_record = await db.get_api_key_by_hash(key_hash)
-    
+
     if not api_key_record:
         return None
-    
+
     user = await db.get_user_by_id(api_key_record["user_id"])
     return user
 

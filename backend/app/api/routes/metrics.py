@@ -13,14 +13,14 @@ async def get_metrics(
 ):
     """
     Get aggregated metrics.
-    
+
     Returns:
     - total_actions
     - approved_count
     - rejected_count
     - reject_rate
     - ai_unavailable_count
-    
+
     Calculated via aggregation, no cache required.
     Requires JWT authentication.
     """
