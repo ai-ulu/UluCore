@@ -1,0 +1,33 @@
+# Smithery configuration for UluCore MCP Server
+# https://smithery.ai/docs/config#smitheryyaml
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required: []
+    properties:
+      stripeSecretKey:
+        type: string
+        description: "Stripe secret key for payment processing (optional - runs in demo mode without it)"
+      governanceMode:
+        type: string
+        default: "standard"
+        description: "Default governance mode: off, standard, or strict"
+      maxFixAttempts:
+        type: number
+        default: 3
+        description: "Maximum debugging fix attempts before escalation"
+  commandFunction: |-
+    (config) => ({
+      command: 'node',
+      args: ['dist/_worker.js'],
+      env: {
+        STRIPE_SECRET_KEY: config.stripeSecretKey || '',
+        GOVERNANCE_MODE: config.governanceMode || 'standard',
+        MAX_FIX_ATTEMPTS: String(config.maxFixAttempts || 3)
+      }
+    })
+remotes:
+  - type: streamable-http
+    url: "https://ulucore-mcp.pages.dev/mcp"
