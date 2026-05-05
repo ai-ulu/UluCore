@@ -1,0 +1,23 @@
+{
+  "name": "@ai-ulu/ulucore-mcp",
+  "version": "2.0.0",
+  "description": "UluCore MCP Server - AI-powered policy engine and governance platform on Cloudflare Workers",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "esbuild src/index.ts --bundle --outfile=pages-dist/_worker.js --format=esm --target=es2022 --platform=browser --define:process.env.NODE_ENV='\"production\"' --minify",
+    "tail": "wrangler tail"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.3.0",
+    "wrangler": "^3.101.0"
+  }
+}
