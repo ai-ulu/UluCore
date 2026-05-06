@@ -1,0 +1,13 @@
+name = "ulucore-mcp"
+pages_build_output_dir = "./pages-dist"
+compatibility_date = "2025-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ulucore-db"
+database_id = "cfdf7bc0-ed03-48e9-bcc3-dac796b4d90a"
+
+# Uncomment when Workers AI is available
+# [ai]
+# binding = "AI"
