@@ -1582,7 +1582,7 @@ export default {
     }
 
     // MCP endpoint
-    if (url.pathname === '/mcp' || url.pathname === '/') {
+    if (url.pathname === '/mcp' || url.pathname === '/' || url.pathname === '/sse') {
       try {
         // Ensure DB tables exist
         const client = new UluCoreClient(env.DB);
@@ -1591,7 +1591,19 @@ export default {
         const transport = new WebStandardStreamableHTTPServerTransport();
         const mcpServer = createMcpServer(env.DB, env);
         await mcpServer.connect(transport);
-        const response = await transport.handleRequest(request);
+        // Ensure Accept header for broad client compatibility
+        // Always inject both Accept types to avoid SDK 406 errors
+        const reqHeaders = new Headers(request.headers);
+        const existingAccept = reqHeaders.get('Accept') || '';
+        if (!existingAccept.includes('text/event-stream') || !existingAccept.includes('application/json')) {
+          reqHeaders.set('Accept', 'application/json, text/event-stream');
+        }
+        const modifiedRequest = new Request(request.url, {
+          method: request.method,
+          headers: reqHeaders,
+          body: request.method !== 'GET' && request.body ? await request.arrayBuffer() : undefined,
+        });
+        const response = await transport.handleRequest(modifiedRequest);
 
         const newHeaders = new Headers(response.headers);
         newHeaders.set('Access-Control-Allow-Origin', '*');
